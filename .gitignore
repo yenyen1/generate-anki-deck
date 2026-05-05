@@ -3,3 +3,5 @@ venv/
 *.log
 .ruff_cache/
 __pycache__
+*.apkg
+*.mp3
