@@ -5,15 +5,15 @@ import genanki
 
 
 class BaseAnkiDeck(ABC):
-    model_id: ClassVar[int]
-    model_name: ClassVar[str]
-    fields: ClassVar[list]
-    qfmt_content: ClassVar[str]
-    afmt_content: ClassVar[str]
+    _model_id: ClassVar[int]
+    _model_name: ClassVar[str]
+    _fields: ClassVar[list[dict[str, str]]]
+    _qfmt_content: ClassVar[str]
+    _afmt_content: ClassVar[str]
 
-    def __init__(self, deck_id: int, deck_name: str, uid_offset: int):
+    def __init__(self, deck_id: int, deck_name: str, start_pid: int):
         self.media_files: list = []
-        self.model = genanki.Model(
+        self._model = genanki.Model(
             self.model_id,
             self.model_name,
             fields=self.fields,
@@ -21,41 +21,57 @@ class BaseAnkiDeck(ABC):
                 {"name": "VCard", "qfmt": self.qfmt_content, "afmt": self.afmt_content}
             ],
         )
-        self.deck = genanki.Deck(deck_id, deck_name)
-        self.uid_offset = uid_offset
+        self._deck = genanki.Deck(deck_id, deck_name)
+        self._start_pid = start_pid
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def deck(self):
+        return self._deck
 
     @property
     def model_id(self):
-        return self.model_id
+        return self._model_id
 
     @property
     def model_name(self):
-        return self.model_name
+        return self._model_name
 
     @property
     def fields(self):
-        return self.fields
+        return self._fields
 
     @property
     def qfmt_content(self):
-        return self.qfmt_content
+        return self._qfmt_content
 
     @property
     def afmt_content(self):
-        return self.afmt_content
+        return self._afmt_content
 
     @property
-    def uid_offset(self) -> int:
-        return self.uid_offset
+    def start_pid(self):
+        return self._start_pid
 
-    @uid_offset.setter
-    def uid_offset(self, value: int):
-        if not isinstance(value, str):
-            raise TypeError("[ERROR] uid_offset should be INT")
-        self.uid_offset = value
+    @start_pid.setter
+    def start_pid(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError("[ERROR] start_pid should be INT")
+        self._start_pid = value
+
+    # @property
+    # def media_files(self) -> list[str]:
+    #     return self._media_files
+
+    # @media_files.setter
+    # def media_files(self, value: str):
+    #     return self._media_files
 
     @abstractmethod
-    def gen_fields(self, *args, **kwargs) -> list:
+    def gen_fields(self, *args, **kwargs) -> list[str]:
         pass
 
     @abstractmethod

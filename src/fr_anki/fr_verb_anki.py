@@ -1,17 +1,112 @@
-from base_anki import BaseAnkiDeck
+from fr_anki.base_anki import BaseAnkiDeck
 
 from pathlib import Path
-from argparse import Namespace
+from argparse import Namespace, ArgumentParser
 import random
 
-import fr_audio.main_cli as fr_audio
-from fr_audio.config import Model
+from fr_audio.main_cli import fetch_verb_conjugation, download_audios
+from fr_audio.config import Model, Moods, Tenses
 import genanki
 
+
+class DeckArgs:
+    def __init__(self, parser: ArgumentParser, args: Namespace):
+        self._mood: str = None
+        self._tense: str = None
+        self._parse_tense(parser, args)
+
+        self._infinitives: list[str] = None
+        self._parse_infinitives(parser, args)
+
+        self._deck_id: int = None
+        self._parse_deck_id(args)
+
+        self._deck_name: str = f"[FR] {args.tense} conjugation test"
+        self._start_pid: int = args.start_pid
+        self._audio_folder: str = args.audio_dir
+        self._apkg_output_name: str = args.output_name
+
+    def _parse_infinitives(self, parser: ArgumentParser, args: Namespace):
+        has_infinitives = bool(args.infinitives)
+        has_file = bool(args.infinitive_file)
+        if not has_infinitives and not has_file:
+            parser.error("You must provide either --infinitives or --infinitive-file")
+        if has_infinitives and has_file:
+            parser.error("Provide only one of --infinitives or --infinitive-file")
+        if has_infinitives:
+            self._infinitives = [
+                verb.strip() for verb in args.infinitives.split(",") if verb.strip()
+            ]
+        else:
+            try:
+                with open(args.infinitive_file, "r") as f:
+                    self._infinitives = [line.strip() for line in f if line.strip()]
+            except FileNotFoundError:
+                parser.error(f"Infinitive file not found: {args.infinitive_file}")
+
+    def _parse_tense(self, parser: ArgumentParser, args: Namespace):
+        tense_mapping = {
+            "present": (Moods.Indicatif, Tenses.Présent),
+            "future": (Moods.Indicatif, Tenses.FuturSimple),
+            "past": (Moods.Indicatif, Tenses.PasséComposé),
+            "past-simple": (Moods.Indicatif, Tenses.PasséSimple),
+            "conditional": (Moods.Conditionnel, Tenses.Présent),
+            "imperative": (Moods.Imperatif, Tenses.ImperatifPrésent),
+        }
+
+        result = tense_mapping.get(args.tense)
+        if not result:
+            parser.error(
+                f"{args.tense} is not supported. "
+                "(supported values: present, future, past, "
+                "past-simple, conditional, imperative)"
+            )
+        self._mood, self._tense = result
+
+    def _parse_deck_id(self, args: Namespace):
+        if args.deck_id:
+            self._deck_id = args.deck_id
+        else:
+            self._deck_id = random.getrandbits(63)
+            print(f"[INFO] Generated new deck_id: {self.deck_id}")
+
+    @property
+    def infinitives(self):
+        return self._infinitives
+
+    @property
+    def deck_id(self):
+        return self._deck_id
+
+    @property
+    def deck_name(self):
+        return self._deck_name
+
+    @property
+    def start_pid(self):
+        return self._start_pid
+
+    @property
+    def audio_folder(self):
+        return self._audio_folder
+
+    @property
+    def apkg_output_name(self):
+        return self._apkg_output_name
+
+    @property
+    def mood(self):
+        return self._mood
+
+    @property
+    def tense(self):
+        return self._tense
+
+
 class FrVerbConjAnkiDeck(BaseAnkiDeck):
-    model_id = 1475388531
-    model_name = "FrVerbConjModel"
-    fields = [
+    _model_id = 1475388531
+    _model_name = "FrVerbConjModel"
+    _fields = [
         {"name": "uid"},
         {"name": "infinitive"},
         {"name": "tense"},
@@ -27,7 +122,7 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
         {"name": "ils_audio"},
         {"name": "elles_audio"},
     ]
-    qfmt_content = """
+    _qfmt_content = """
         <div style="text-align: center;">
             <div style="color: gray; font-size: 20px;">{{tense}}</div> 
             <div style="color: blue; font-size: 30px; font-weight: bold;">{{infinitive}}</div>{{inf_audio}}
@@ -35,7 +130,7 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
             {{type:conjugations}}
         </div>
         """
-    afmt_content = """
+    _afmt_content = """
         <div style="text-align: center;">{{FrontSide}}
             <hr id="answer">
             <div style="color: gray; font-size: 16px;">
@@ -46,23 +141,23 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
         """
 
     def __init__(self, deck_args: DeckArgs):
-        super().__init__(deck_args.deck_id, deck_args.deck_name, deck_args.uid_offset)
-        self.mood = deck_args.mood
-        self.tense = deck_args.tense
-        self.conjugation_dict = {}
-        self.audio_folder = Path(deck_args.audio_floder)
+        super().__init__(deck_args.deck_id, deck_args.deck_name, deck_args.start_pid)
+        self._mood: str = deck_args.mood
+        self._tense: str = deck_args.tense
+        self.conjugation_dict: dict[str, str] = {}
+        self._audio_folder: Path = Path(deck_args.audio_folder)
 
     @property
     def mood(self):
-        return self.mood
+        return self._mood
 
     @property
     def tense(self):
-        return self.tense
+        return self._tense
 
     @property
     def audio_folder(self):
-        return self.audio_folder
+        return self._audio_folder
 
     def gen_fields(
         self, uid: int, infinitive: str, conjugation_list: list[str]
@@ -93,20 +188,22 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
 
         for conj in conjugation_list:
             fields.append(gen_sound_dir(conj))
+        fields = fields[:14] + [""] * max(0, 14 - len(fields))
+
         return fields
 
     def add_note(self):
         """
         Populate the Anki deck with notes generated from the verb conjugation dictionary,
-        using the specified model and starting ID offset.
+        using the specified model and starting PID.
         """
 
         for infinitive, conj in self.conjugation_dict.items():
-            my_fields = self.gen_fields(self.uid_offset, infinitive, self.tense, conj)
+            my_fields = self.gen_fields(self.start_pid, infinitive, conj)
             my_note = genanki.Note(self.model, my_fields)
             self.deck.add_note(my_note)
 
-            self.uid_offset += 1
+            self.start_pid += 1
 
     def build_conjugation_dict(self, infinitives: list[str]):
         """
@@ -115,15 +212,12 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
         Args:
             infinitives (list[str]): a list of infinitives
         """
-
         for infinitive in infinitives:
-            conj = fr_audio.fetch_verb_conjugation(
-                "fr", infinitive, self.mood, self.tense
-            )
-            if len(conj) > 0:
+            try:
+                conj = fetch_verb_conjugation("fr", infinitive, self.mood, self.tense)
                 self.conjugation_dict[infinitive] = conj
-            else:
-                print(f"[Skip] Can not conjugate {infinitive} for {self.tense}")
+            except Exception as e:
+                print(f"[Skip] Can not conjugate {infinitive} for {self.tense}: {e}")
 
     def download_audios(self) -> bool:
         """
@@ -134,11 +228,11 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
         """
 
         infinitives = list(self.conjugation_dict.keys())
-        fr_audio.download_audios(self.audio_folder, Model.VoiceModel, infinitives)
+        download_audios(self.audio_folder, Model.VoiceModel, infinitives)
 
         for infinitive in infinitives:
             conj = self.conjugation_dict.get(infinitive)
-            result = fr_audio.download_audios(self.audio_folder, Model.VoiceModel, conj)
+            result = download_audios(self.audio_folder, Model.VoiceModel, conj)
 
             if not result:
                 conj.pop(infinitive, None)
@@ -163,64 +257,12 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
                 self.media_files.append(gen_abs_path(self.audio_folder, c))
 
 
-class DeckArgs:
-    def __init__(self, args: Namespace, mood: str, tense: str):
-        self.deck_id = (
-            args.deck_id if args.deck_id else random.randrange(1 << 30, 1 << 31)
-        )
-        self.deck_name = f"[FR] {tense} tense conjugation test"
-        self.uid_offset = args.uid_offset
-        self.audio_folder = args.audio_dir
-        self.apkg_output_name = args.output_name
-        self.mood = mood
-        self.tense = tense
-
-        if not args.deck_id:
-            print(f"[INFO] Genarate new deck_id: {self.deck_id}")
-
-    @property
-    def deck_id(self):
-        return self.deck_id
-
-    @property
-    def deck_name(self):
-        return self.deck_name
-
-    @property
-    def uid_offset(self):
-        return self.uid_offset
-
-    @property
-    def audio_folder(self):
-        return self.audio_folder
-
-    @property
-    def apkg_output_name(self):
-        return self.apkg_output_name
-
-    @property
-    def mood(self):
-        return self.mood
-
-    @property
-    def tense(self):
-        return self.tense
-
 def gen_fr_verb_conj_anki_deck(deck_args: DeckArgs):
     # Setup Model and Deck
     my_model = FrVerbConjAnkiDeck(deck_args)
 
-    # infinitives = ["aller", "devoir", "faire"]
-    if deck_args.infinitives:
-        infinitives = deck_args.infinitives.split(",")
-    elif deck_args.infinitive_file:
-        with open(deck_args.infinitive_file, 'r') as f:
-            data = f.read()
-        print(data.split('\n'))
-    
-
     # generate conjugation and download audios
-    my_model.build_conjugation_dict(infinitives)
+    my_model.build_conjugation_dict(deck_args.infinitives)
     success = my_model.download_audios()
 
     if success:
@@ -235,6 +277,6 @@ def gen_fr_verb_conj_anki_deck(deck_args: DeckArgs):
         my_model.export(f"{deck_args.apkg_output_name}.apkg")
         print("[INFO] finished generate apkg file.")
     else:
-        print(
-            "[ERROR] No input infinitives can be successfully conjugated and downloaded"
+        raise RuntimeError(
+            "None of the input infinitives could be processed successfully."
         )
