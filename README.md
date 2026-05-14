@@ -60,13 +60,13 @@ fr-anki verb --tense present --infinitive-file verbs.txt --deck-id 132526148 --s
 
     It shows the infinitive form with audio. You can type the conjugations separated by `/` in the input box.
 
-    <img src="images/verb_front.png" width="60%">
+    <img src="images/verb_front.png" width="80%">
 
 - **Back**
 
     It displays all conjugation forms with audio and highlights your typing errors in different colors.
 
-    <img src="images/verb_back.png" width="60%">
+    <img src="images/verb_back.png" width="80%">
 
 
 
