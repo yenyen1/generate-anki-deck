@@ -243,7 +243,7 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
             result = download_audios(self.audio_folder, Model.VoiceModel, conj)
 
             if not result:
-                conj.pop(infinitive, None)
+                self.conjugation_dict.pop(infinitive, None)
                 print(
                     f"[Skip] Can not download {infinitive} audio MP3 for {self.tense}"
                 )

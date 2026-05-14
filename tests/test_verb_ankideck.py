@@ -203,7 +203,7 @@ def test_build_conjugation_dict(capsys):
     assert verb_deck.conjugation_dict.get("avoir") == expect_result
 
 
-def test_download_audios(temp_output_dir):
+def test_download_audios(capsys, temp_output_dir):
     parser = create_parser()
     args = parser.parse_args(
         [
@@ -224,6 +224,13 @@ def test_download_audios(temp_output_dir):
     assert "None of the input infinitives was processed to conjugation forms." in str(
         emsg.value
     )
+
+    verb_deck.conjugation_dict["~"] = ["~"]
+    assert len(verb_deck.conjugation_dict) == 1
+    num = verb_deck._download_audios()
+    captured = capsys.readouterr()
+    assert num == 0
+    assert "[Skip] Can not download" in captured.out
 
     verb_deck._build_conjugation_dict(["avoir"])
 

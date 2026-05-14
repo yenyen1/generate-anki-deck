@@ -17,13 +17,13 @@ def create_parser() -> ArgumentParser:
         "--deck-id",
         type=int,
         default=None,
-        help="Anki deck identifier",
+        help="Anki deck identifier (specify --deck-id and --start-pid if you want to import new cards into an existing Anki deck)",
     )
     verb_parser.add_argument(
         "--start-pid",
         type=int,
         default=1,
-        help="Starting value for the card primary ID",
+        help="Starting value for the card primary ID (Specify --deck-id and --start-pid if you want to import new cards into an existing Anki deck)",
     )
     verb_parser.add_argument(
         "--audio-dir",
