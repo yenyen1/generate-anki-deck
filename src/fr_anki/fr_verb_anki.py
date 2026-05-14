@@ -159,7 +159,7 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
     def audio_folder(self):
         return self._audio_folder
 
-    def gen_fields(
+    def _gen_fields(
         self, uid: int, infinitive: str, conjugation_list: list[str]
     ) -> list[str]:
         """
@@ -192,20 +192,24 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
 
         return fields
 
-    def add_note(self):
+    def _add_note(self):
         """
         Populate the Anki deck with notes generated from the verb conjugation dictionary,
         using the specified model and starting PID.
         """
+        if len(self.conjugation_dict) == 0:
+            raise ValueError(
+                "None of the input infinitives was processed to conjugation forms. Please ensure that you provide the correct infinitives, or make sure to run self.build_conjugation_dict before calling self.add_note."
+            )
 
         for infinitive, conj in self.conjugation_dict.items():
-            my_fields = self.gen_fields(self.start_pid, infinitive, conj)
+            my_fields = self._gen_fields(self.start_pid, infinitive, conj)
             my_note = genanki.Note(self.model, my_fields)
             self.deck.add_note(my_note)
 
             self.start_pid += 1
 
-    def build_conjugation_dict(self, infinitives: list[str]):
+    def _build_conjugation_dict(self, infinitives: list[str]):
         """
         Build a conjugation dictionary that maps infinitives to corresponding conjugation phrases list
 
@@ -219,13 +223,17 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
             except Exception as e:
                 print(f"[Skip] Can not conjugate {infinitive} for {self.tense}: {e}")
 
-    def download_audios(self) -> bool:
+    def _download_audios(self) -> int:
         """
         Download audio MP3 files for all infinitives and conjugation phrases.
 
         Returns:
-            bool: Return True if at least ONE audio files were downloaded.
+            int: Return the number of infinitives that were successfully conjugated and downloaded.
         """
+        if len(self.conjugation_dict) == 0:
+            raise ValueError(
+                "None of the input infinitives was processed to conjugation forms. Please ensure that you provide the correct infinitives, or make sure to run self.build_conjugation_dict before calling self.add_note."
+            )
 
         infinitives = list(self.conjugation_dict.keys())
         download_audios(self.audio_folder, Model.VoiceModel, infinitives)
@@ -240,9 +248,9 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
                     f"[Skip] Can not download {infinitive} audio MP3 for {self.tense}"
                 )
 
-        return len(self.conjugation_dict) > 0
+        return len(self.conjugation_dict)
 
-    def set_media_files(self):
+    def _set_media_files(self):
         """
         Generate absolute path for all audio MP3 files and set it to Genanki media files
         """
@@ -258,25 +266,27 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
 
 
 def gen_fr_verb_conj_anki_deck(deck_args: DeckArgs):
+    """
+    Generate French verb conjugation Anki Deck
+
+    Args:
+        deck_args (DeckArgs): input DeckArgs
+    """
     # Setup Model and Deck
     my_model = FrVerbConjAnkiDeck(deck_args)
 
     # generate conjugation and download audios
-    my_model.build_conjugation_dict(deck_args.infinitives)
-    success = my_model.download_audios()
+    my_model._build_conjugation_dict(deck_args.infinitives)
+    success_num = my_model._download_audios()
+    print(f"[INFO] Finished generating {success_num} infinitives' audio files")
 
-    if success:
-        print("[INFO] Finished generating conjugation and downloaded audios")
-
-        # Add card
-        my_model.add_note()
-        print("[INFO] Finished adding Anki cards")
+    try:
+        my_model._add_note()
+        my_model._set_media_files()
+        print("[INFO] Finished adding Anki cards an media files")
 
         # Generate APKG file (automatically generate collection.anki21)
-        my_model.set_media_files()
         my_model.export(f"{deck_args.apkg_output_name}.apkg")
-        print("[INFO] finished generate apkg file.")
-    else:
-        raise RuntimeError(
-            "None of the input infinitives could be processed successfully."
-        )
+        print(f"[INFO] finished generate {deck_args.apkg_output_name}.apkg file.")
+    except Exception as e:
+        raise RuntimeError(e)

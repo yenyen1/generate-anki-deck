@@ -114,22 +114,44 @@ def test_ankideck_gen_fields():
         "[sound:tu_as.mp3]",
     ]
     expect_result = expect_result[:14] + [""] * (14 - len(expect_result))
-    actuall_result = verb_deck.gen_fields(3, "avoir", ["j'ai", "tu as"])
+    actuall_result = verb_deck._gen_fields(3, "avoir", ["j'ai", "tu as"])
     assert expect_result == actuall_result
 
 
-def test_ankideck_add_note(capsys):
-    # check how imperative works?
-    pass
-    # parser = create_parser()
-    # args = parser.parse_args(["verb", "--tense", "present", "--infinitives", "avoir"])
-    # deck_args = DeckArgs(parser, args)
-    # verb_deck = FrVerbConjAnkiDeck(deck_args)
-    # actuall_result = verb_deck.gen_fields(3, "avoir", ["j'ai", "tu as"])
+def test_ankideck_add_note():
+    parser = create_parser()
 
-    # mynote = Note(verb_deck.model, actuall_result)
-    # cuptured = capsys.readouterr()
-    # assert mynote.fields == ""
+    args = parser.parse_args(["verb", "--tense", "present", "--infinitives", "avoir"])
+    deck_args = DeckArgs(parser, args)
+    verb_deck = FrVerbConjAnkiDeck(deck_args)
+
+    # raise ValueError if none of verb was conjugated
+    with pytest.raises(ValueError) as emsg:
+        verb_deck._add_note()
+    assert "None of the input infinitives was processed to conjugation forms." in str(
+        emsg.value
+    )
+
+    # normal case
+    infinitives = ["prendre", "aller"]
+    verb_deck._build_conjugation_dict(infinitives)
+    num = verb_deck._download_audios()
+    assert num == len(infinitives)
+    verb_deck._add_note()
+    assert len(verb_deck.deck.notes) == len(infinitives)
+    assert len(verb_deck.deck.notes[0].fields) == len(verb_deck.fields)
+
+    # imperative case
+    args = parser.parse_args(["verb", "--tense", "present", "--infinitives", "avoir"])
+    deck_args = DeckArgs(parser, args)
+    verb_deck = FrVerbConjAnkiDeck(deck_args)
+    infinitives = ["voir"]
+    verb_deck._build_conjugation_dict(infinitives)
+    num = verb_deck._download_audios()
+    assert num == len(infinitives)
+    verb_deck._add_note()
+    assert len(verb_deck.deck.notes) == len(infinitives)
+    assert len(verb_deck.deck.notes[0].fields) == len(verb_deck.fields)
 
 
 def test_set_media_files():
@@ -139,11 +161,11 @@ def test_set_media_files():
     verb_deck = FrVerbConjAnkiDeck(deck_args)
 
     assert len(verb_deck.conjugation_dict) == 0
-    verb_deck.set_media_files()
+    verb_deck._set_media_files()
     assert verb_deck.media_files == []
 
-    verb_deck.build_conjugation_dict(["avoir"])
-    verb_deck.set_media_files()
+    verb_deck._build_conjugation_dict(["avoir"])
+    verb_deck._set_media_files()
     expect_result = [(verb_deck.audio_folder / "avoir.mp3").resolve()]
     expect_result += [
         (verb_deck.audio_folder / f"{e.replace(' ', '_')}.mp3").resolve()
@@ -162,11 +184,11 @@ def test_build_conjugation_dict(capsys):
     deck_args = DeckArgs(parser, args)
     verb_deck = FrVerbConjAnkiDeck(deck_args)
 
-    verb_deck.build_conjugation_dict(["happy"])
+    verb_deck._build_conjugation_dict(["happy"])
     captured = capsys.readouterr()
     assert "[Skip] Can not conjugate" in captured.out
 
-    verb_deck.build_conjugation_dict(["avoir"])
+    verb_deck._build_conjugation_dict(["avoir"])
     expect_result = [
         "j'ai",
         "tu as",
@@ -183,15 +205,32 @@ def test_build_conjugation_dict(capsys):
 
 def test_download_audios(temp_output_dir):
     parser = create_parser()
-    args = parser.parse_args(["verb", "--tense", "present", "--infinitives", "avoir", "--audio-dir", str(temp_output_dir)])
+    args = parser.parse_args(
+        [
+            "verb",
+            "--tense",
+            "present",
+            "--infinitives",
+            "avoir",
+            "--audio-dir",
+            str(temp_output_dir),
+        ]
+    )
     deck_args = DeckArgs(parser, args)
     verb_deck = FrVerbConjAnkiDeck(deck_args)
-    verb_deck.build_conjugation_dict(["avoir"])
+
+    with pytest.raises(ValueError) as emsg:
+        verb_deck._add_note()
+    assert "None of the input infinitives was processed to conjugation forms." in str(
+        emsg.value
+    )
+
+    verb_deck._build_conjugation_dict(["avoir"])
 
     assert verb_deck.audio_folder == temp_output_dir
     assert not (temp_output_dir / "j'ai.mp3").exists()
 
-    verb_deck.download_audios()
+    verb_deck._download_audios()
     assert (temp_output_dir / "avoir.mp3").exists()
     assert (temp_output_dir / "j'ai.mp3").exists()
     assert (temp_output_dir / "tu_as.mp3").exists()

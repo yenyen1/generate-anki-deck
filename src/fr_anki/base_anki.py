@@ -71,15 +71,15 @@ class BaseAnkiDeck(ABC):
     #     return self._media_files
 
     @abstractmethod
-    def gen_fields(self, *args, **kwargs) -> list[str]:
+    def _gen_fields(self, *args, **kwargs) -> list[str]:
         pass
 
     @abstractmethod
-    def add_note(self, *args, **kwargs):
+    def _add_note(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def set_media_files(self):
+    def _set_media_files(self):
         pass
 
     def export(self, output_path: str):
