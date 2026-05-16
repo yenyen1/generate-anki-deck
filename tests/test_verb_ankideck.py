@@ -28,7 +28,7 @@ def test_ankideck_init_type_check():
     assert verb_deck.start_pid == deck_args.start_pid
 
     # para specific for FrVerbConjAnkiDeck
-    assert len(verb_deck.fields) == 14
+    assert len(verb_deck.fields) == 15
     assert isinstance(verb_deck.mood, str)
     assert isinstance(verb_deck.tense, str)
     assert isinstance(verb_deck.audio_folder, Path)
@@ -107,14 +107,41 @@ def test_ankideck_gen_fields():
     expect_result = [
         "3",
         "avoir",
+        "",
         "présent",
-        "j'ai/tu as",
+        "j'ai/tu as/elle a",
         "[sound:avoir.mp3]",
         "[sound:j'ai.mp3]",
         "[sound:tu_as.mp3]",
+        "",
+        "[sound:elle_a.mp3]",
     ]
-    expect_result = expect_result[:14] + [""] * (14 - len(expect_result))
-    actuall_result = verb_deck._gen_fields(3, "avoir", ["j'ai", "tu as"])
+    expect_result = expect_result[:15] + [""] * (15 - len(expect_result))
+    actuall_result = verb_deck._gen_fields(3, "avoir", ["j'ai", "tu as", "elle a"])
+    assert expect_result == actuall_result
+
+    args = parser.parse_args(
+        ["verb", "--tense", "imperative", "--infinitives", "ouvre"]
+    )
+    deck_args = DeckArgs(parser, args)
+    verb_deck = FrVerbConjAnkiDeck(deck_args)
+    expect_result = [
+        "3",
+        "ouvrir",
+        "",
+        "imperatif-présent",
+        "ouvre/ouvrons/ouvrez",
+        "[sound:ouvrir.mp3]",
+        "",
+        "[sound:ouvre.mp3]",
+        "",
+        "",
+        "",
+        "[sound:ouvrons.mp3]",
+        "[sound:ouvrez.mp3]",
+    ]
+    expect_result = expect_result[:15] + [""] * (15 - len(expect_result))
+    actuall_result = verb_deck._gen_fields(3, "ouvrir", ["ouvre", "ouvrons", "ouvrez"])
     assert expect_result == actuall_result
 
 

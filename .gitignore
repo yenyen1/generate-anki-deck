@@ -10,3 +10,5 @@ audios/
 *.apkg
 *.mp3
 
+# input files
+input/

@@ -109,6 +109,7 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
     _fields = [
         {"name": "uid"},
         {"name": "infinitive"},
+        {"name": "note"},
         {"name": "tense"},
         {"name": "conjugations"},
         {"name": "inf_audio"},
@@ -137,6 +138,8 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
                 Je: {{je_audio}}; Tu: {{tu_audio}}; Il: {{il_audio}}; Elle: {{elle_audio}}; On: {{on_audio}}<br>
                 Nous: {{nous_audio}}; Vous: {{vous_audio}}; Ils: {{ils_audio}}; Elles: {{elles_audio}}<br>
             </div>
+            <br><br>
+            <div style="color: blue; font-size: 20px;">{{note}}</div> 
         </div>
         """
 
@@ -177,19 +180,49 @@ class FrVerbConjAnkiDeck(BaseAnkiDeck):
         def gen_sound_dir(name: str):
             return f"[sound:{name.replace(' ', '_')}.mp3]"
 
+        def gen_aligned_sound_dir(conjugation_list: list[str]) -> list[str]:
+            subjects = ["j", "tu", "il ", "elle ", "on", "nous", "vous", "ils", "elles"]
+            result = [""] * len(subjects)
+            for conj in conjugation_list:
+                for idx, subject in enumerate(subjects):
+                    if conj.startswith(subject):
+                        result[idx] = gen_sound_dir(conj)
+                        break
+            return result
+
+        def gen_aligned_imperative_sound_dir(conjugation_list: list[str]) -> list[str]:
+            return [
+                "",
+                gen_sound_dir(conjugation_list[0]),
+                "",
+                "",
+                "",
+                gen_sound_dir(conjugation_list[1]),
+                gen_sound_dir(conjugation_list[2]),
+            ]
+
         inf_sound = gen_sound_dir(infinitive)
         fields = [
             str(uid),
             infinitive,
+            "",
             self.tense,
             "/".join(conjugation_list),
             inf_sound,
         ]
 
-        for conj in conjugation_list:
-            fields.append(gen_sound_dir(conj))
-        fields = fields[:14] + [""] * max(0, 14 - len(fields))
+        field_size = len(self._fields)
 
+        if len(conjugation_list) < field_size:
+            if self.tense == Tenses.ImperatifPrésent and len(conjugation_list) == 3:
+                fields += gen_aligned_imperative_sound_dir(conjugation_list)
+            else:
+                fields += gen_aligned_sound_dir(conjugation_list)
+        else:
+            for conj in conjugation_list:
+                fields.append(gen_sound_dir(conj))
+
+        fields = fields[:field_size] + [""] * max(0, field_size - len(fields))
         return fields
 
     def _add_note(self):
