@@ -320,6 +320,6 @@ def gen_fr_verb_conj_anki_deck(deck_args: DeckArgs):
 
         # Generate APKG file (automatically generate collection.anki21)
         my_model.export(f"{deck_args.apkg_output_name}.apkg")
-        print(f"[INFO] finished generate {deck_args.apkg_output_name}.apkg file.")
+        print(f"[INFO] Finished generate {deck_args.apkg_output_name}.apkg file.")
     except Exception as e:
         raise RuntimeError(e)
