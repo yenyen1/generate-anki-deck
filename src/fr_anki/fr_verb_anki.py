@@ -4,7 +4,8 @@ from pathlib import Path
 from argparse import Namespace, ArgumentParser
 import random
 
-from fr_audio.main_cli import fetch_verb_conjugation, download_audios
+from fr_audio.conjugation import fetch_verb_conjugation 
+from fr_audio.audio import download_audios
 from fr_audio.config import Model, Moods, Tenses
 import genanki
 
