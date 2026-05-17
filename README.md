@@ -1,5 +1,8 @@
 # Generate French learning Anki Deck
 
+[![PyPI - Version](https://img.shields.io/pypi/v/fr-anki.svg)](https://pypi.org/project/fr-anki)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/fr-anki.svg)](https://pypi.org/project/fr-anki)
+
 A CLI tool that creates French verb conjugation typing decks for Anki. Simply input a list of infinitives and choose which tenses to practice. The tool generates an APKG file ready to be imported into Anki. Currently supported common tenses include: indicatif présent, indicatif futur simple, indicatif passé composé, indicatif passé simple, conditionnel présent, and impératif présent.
 
 ## Installation
