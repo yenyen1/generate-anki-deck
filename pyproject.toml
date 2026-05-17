@@ -5,15 +5,25 @@ build-backend = "hatchling.build"
 [project]
 name = "fr-anki"  
 version = "0.1.0"
-description = "Provide a list of French infinitive verbs and specify desired tense(s), the tool automatically generate Anki deck for all person-specific conjugations"
+description = "Provide a list of French infinitive verbs and specify desired tense, the tool automatically generates Anki deck for all person-specific conjugations"
 authors = [
     { name = "Yenyen Wang", email = "wangyenyen.st00g@g2.nctu.edu.tw" }
 ]
 readme = "README.md"
 requires-python = ">= 3.9"
 dependencies = [
-    "fr_audio",
-    "genanki"
+    "fr_audio>=0.3.0",
+    "genanki>=0.13.0"
+]
+classifiers = [
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Utilities"
 ]
 license = "LGPL-3.0-or-later"
 license-files = ["LICEN[CS]E*"]
@@ -27,5 +37,12 @@ dev = [
     "pre-commit"
 ]
 
+[project.urls]
+Homepage = "https://github.com/yenyen1/generate-anki-deck"
+Issues = "https://github.com/yenyen1/generate-anki-deck/issues" 
+
 [project.scripts]
 fr-anki = "fr_anki.main:main"
+
+[tool.hatch.build.targets.wheel]
+exclude = ["tests/"]
