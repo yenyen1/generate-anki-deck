@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fr-anki"  
-version = "0.1.0"
+version = "0.1.1"
 description = "Provide a list of French infinitive verbs and specify desired tense, the tool automatically generates Anki deck for all person-specific conjugations"
 authors = [
     { name = "Yenyen Wang", email = "wangyenyen.st00g@g2.nctu.edu.tw" }
